@@ -31,6 +31,7 @@ limitations under the License.
 #include "tensorflow/core/data/service/utils.h"
 #include "tensorflow/core/data/standalone.h"
 #include "tensorflow/core/framework/tensor.pb.h"
+#include "tensorflow/core/kernels/data/model_dataset_op.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/lib/io/zlib_outputbuffer.h"
 #include "tensorflow/core/lib/monitoring/gauge.h"
@@ -317,7 +318,7 @@ Status DataServiceWorkerImpl::SendTaskUpdates() TF_LOCKS_EXCLUDED(mu_) {
 void DataServiceWorkerImpl::HeartbeatThread() TF_LOCKS_EXCLUDED(mu_) {
   while (true) {
     int64 next_heartbeat_micros =
-        Env::Default()->NowMicros() + (config_.heartbeat_interval_ms() * 1000);
+        Env::Default()->NowMicros() + (500 * 1000);
     {
       mutex_lock l(mu_);
       while (!cancelled_ &&
@@ -346,9 +347,23 @@ void DataServiceWorkerImpl::HeartbeatThread() TF_LOCKS_EXCLUDED(mu_) {
 Status DataServiceWorkerImpl::Heartbeat() TF_LOCKS_EXCLUDED(mu_) {
   std::vector<int64> current_tasks;
   {
+    VLOG(1) << "(DataServiceWorkerImpl::Heartbeat) Starting heartbeat";
     mutex_lock l(mu_);
     for (const auto& task : tasks_) {
       current_tasks.push_back(task.first);
+      
+      if (task.second->task_def.dataset_case() == TaskDef::kDatasetDef) {
+        standalone::Dataset::Params params;
+        std::unique_ptr<standalone::Dataset> dataset;
+        TF_RETURN_IF_ERROR(standalone::Dataset::FromGraph(
+                params, task.second->task_def.dataset_def().graph(), &dataset));
+        MyResource* var;
+        Status s = dataset->GetMetrics("my_container", "my_resource", var);
+        if (s.ok()) {
+          VLOG(1) << "(DataServiceWorkerImpl::Heartbeat) Got value" 
+                  << var->counter; 
+        }
+      }
     }
   }
   std::vector<TaskDef> new_tasks;

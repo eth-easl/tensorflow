@@ -19,7 +19,6 @@ limitations under the License.
 #include "tensorflow/core/framework/partial_tensor_shape.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/kernels/data/dataset_utils.h"
-#include "tensorflow/core/kernels/data/model_dataset_op.h"
 #include "tensorflow/core/kernels/data/name_utils.h"
 #include "tensorflow/core/lib/random/random.h"
 
@@ -152,15 +151,6 @@ class MapDatasetOp::Dataset : public DatasetBase {
       // `input_impl_` and `f` are thread-safe. However, if multiple
       // threads enter this method, outputs may be observed in a
       // non-deterministic order.
-
-      // Test the ResourceMgr
-      MyResource* var;
-      ResourceMgr* rm = ctx->resource_mgr();
-      Status status = rm->Lookup("my_container", "my_resource", &var);
-      if (status.ok()) {
-        VLOG(1) << "(Map ResourceMgr) Current val: " << var->counter;
-        var->Unref();
-      }       
 
       std::vector<Tensor> args;
       TF_RETURN_IF_ERROR(input_impl_->GetNext(ctx, &args, end_of_sequence));

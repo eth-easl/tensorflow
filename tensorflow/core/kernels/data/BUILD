@@ -474,7 +474,6 @@ tf_kernel_library(
         ":captured_function",
         ":dataset_utils",
         ":name_utils",
-        ":model_dataset_op",
         "//tensorflow/core:core_cpu_internal",
         "//tensorflow/core:dataset_ops_op_lib",
         "//tensorflow/core:framework",
