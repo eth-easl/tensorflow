@@ -196,12 +196,12 @@ class ModelDatasetOp::Dataset : public DatasetBase {
             ctx->StartThread("tf_data_model", [this]() { ModelThread(); });
       }
       // Start the metrics thread if necessary
-      // if (!metrics_thread_) {
-      //   std::shared_ptr<IteratorContext> new_ctx =
-      //       std::make_shared<IteratorContext>(*ctx);
-      //   metrics_thread_ = ctx->StartThread(
-      //       "tf_data_metrics", [this, new_ctx]() { MetricsThread(new_ctx); });
-      // }
+      if (!metrics_thread_) {
+        std::shared_ptr<IteratorContext> new_ctx =
+            std::make_shared<IteratorContext>(*ctx);
+        metrics_thread_ = ctx->StartThread(
+            "tf_data_metrics", [this, new_ctx]() { MetricsThread(new_ctx); });
+      }
 
       return Status::OK();
     }
@@ -252,6 +252,20 @@ class ModelDatasetOp::Dataset : public DatasetBase {
                   << " \n > " << x.second.bytes_produced() 
                   << " \n > " << x.second.num_elements()
                   << " \n > " << x.second.computation_time();
+        }
+
+        // Test the ResourceMgr
+        MyResource* var;
+        ResourceMgr* rm = ctx->resource_mgr();
+        Status s = rm->Lookup("my_container", "my_resource", &var);
+        if (!s.ok()) {
+          var = new MyResource();
+          var->counter = 0;
+          rm->Create("my_container", "my_resource", var);
+        } else {
+          var->counter++;
+          VLOG(1) << "(ResourceMgr) Updated to: " << var->counter;
+          var->Unref();
         }
       }
     }

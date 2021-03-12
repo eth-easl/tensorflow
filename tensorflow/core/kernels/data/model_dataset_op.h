@@ -22,9 +22,16 @@ limitations under the License.
 #if !defined(IS_MOBILE_PLATFORM)
 #include "tensorflow/core/framework/dataset.h"
 #include "tensorflow/core/framework/model.h"
+#include "tensorflow/core/framework/resource_mgr.h"
 
 namespace tensorflow {
 namespace data {
+
+class MyResource : public ResourceBase {
+  public: 
+   int counter;
+   std::string DebugString() const { return "asd"; }
+};
 
 class ModelDatasetOp : public UnaryDatasetOpKernel {
  public:
